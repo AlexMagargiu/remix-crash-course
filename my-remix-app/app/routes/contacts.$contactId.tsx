@@ -1,7 +1,21 @@
-import { Form, useLoaderData } from "@remix-run/react";
-import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import {
+  Form,
+  isRouteErrorResponse,
+  useLoaderData,
+  useNavigate,
+  useRouteError,
+} from "@remix-run/react";
+import {
+  ActionFunctionArgs,
+  json,
+  type LoaderFunctionArgs,
+} from "@remix-run/node";
 import type { FunctionComponent } from "react";
-import { getContact, type ContactRecord } from "../data.server";
+import {
+  getContact,
+  updateContactById,
+  type ContactRecord,
+} from "../data.server";
 import invariant from "tiny-invariant";
 
 export async function loader({ params }: LoaderFunctionArgs) {
@@ -12,6 +26,34 @@ export async function loader({ params }: LoaderFunctionArgs) {
     throw new Response("Not found", { status: 404 });
   }
   return json(contact);
+}
+
+export async function action({ params, request }: ActionFunctionArgs) {
+  invariant(params.contactId, "Missing contactId param");
+  const formData = await request.formData();
+  return updateContactById(params.contactId, {
+    favorite: formData.get("favorite") === "true",
+  });
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  const navigate = useNavigate();
+  return (
+    <div className="contact-error">
+      <h1>Your contact doesn't exist</h1>
+      <p>
+        {isRouteErrorResponse(error)
+          ? `${error.status} ${error.statusText}`
+          : error instanceof Error
+          ? error.message
+          : "Unknown Error"}
+      </p>
+      <div>
+        <button onClick={() => navigate(-1)}>Back</button>
+      </div>
+    </div>
+  );
 }
 
 export default function Contact() {
@@ -55,7 +97,7 @@ export default function Contact() {
           </Form>
 
           <Form
-            action="destroy"
+            action="delete"
             method="post"
             onSubmit={(event) => {
               const response = confirm(

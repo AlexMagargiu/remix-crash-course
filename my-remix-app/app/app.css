@@ -448,3 +448,13 @@ i {
 .contact-error {
   padding: 6rem;
 }
+
+.root-error {
+  background-color: red;
+  color: white;
+  padding: 6rem;
+}
+
+.contact-error {
+  padding: 6rem;
+}

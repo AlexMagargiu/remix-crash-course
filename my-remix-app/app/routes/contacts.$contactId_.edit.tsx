@@ -1,9 +1,14 @@
-import type { LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import { Form, useLoaderData } from "@remix-run/react";
+import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import {
+  Form,
+  useActionData,
+  useLoaderData,
+  useNavigate,
+} from "@remix-run/react";
 import invariant from "tiny-invariant";
 
-import { getContact } from "../data.server";
+import { getContact, updateContactById } from "../data.server";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.contactId, "Missing contactId param");
@@ -14,8 +19,26 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   return json({ contact });
 };
 
+export const action = async ({ params, request }: ActionFunctionArgs) => {
+  invariant(params.contactId, "Missing contactId param");
+  const formData = await request.formData();
+  const data = Object.fromEntries(formData);
+  const updateResponse = await updateContactById(params.contactId, data);
+  if (updateResponse.error) {
+    return json({
+      data: null,
+      error: updateResponse.error,
+    });
+  } else {
+    return redirect("/contacts/" + params.contactId);
+  }
+};
+
 export default function EditContact() {
   const { contact } = useLoaderData<typeof loader>();
+  const formResponse = useActionData<typeof action>();
+  const navigate = useNavigate();
+  console.log(formResponse);
 
   return (
     <Form id="contact-form" method="post">
@@ -61,7 +84,9 @@ export default function EditContact() {
       </label>
       <p>
         <button type="submit">Save</button>
-        <button type="button">Cancel</button>
+        <button type="button" onClick={() => navigate(-1)}>
+          Cancel
+        </button>
       </p>
     </Form>
   );
